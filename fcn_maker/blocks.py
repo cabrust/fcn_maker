@@ -1,13 +1,13 @@
 from __future__ import (print_function,
                         division)
-from keras.layers import (Activation,
+from tensorflow.python.keras.layers import (Activation,
                           Dropout,
                           AlphaDropout,
                           Lambda)
-from keras.layers.merge import add as merge_add
-from keras.layers.merge import concatenate as merge_concat
-from keras.layers.normalization import BatchNormalization
-from keras.layers.convolutional import (Conv2D,
+from tensorflow.python.keras.layers.merge import add as merge_add
+from tensorflow.python.keras.layers.merge import concatenate as merge_concat
+from tensorflow.python.keras.layers.normalization import BatchNormalization
+from tensorflow.python.keras.layers.convolutional import (Conv2D,
                                         Conv3D,
                                         Conv2DTranspose,
                                         Conv3DTranspose,
@@ -15,9 +15,9 @@ from keras.layers.convolutional import (Conv2D,
                                         MaxPooling3D,
                                         UpSampling2D,
                                         UpSampling3D)
-from keras.initializers import VarianceScaling
-from keras.regularizers import l2
-from keras import backend as K
+from tensorflow.python.keras.initializers import VarianceScaling
+from tensorflow.python.keras.regularizers import l2
+from tensorflow.python.keras import backend as K
 
 
 """
@@ -146,7 +146,7 @@ def _subsample(x, ndim):
         raise ValueError('ndim must be 2 or 3')
     
     # Output shape.
-    output_shape = list(x._keras_shape)
+    output_shape = list(x.shape)
     spatial_dims = set(range(ndim+2)).difference([0, channel_axis])
     for dim in spatial_dims:
         output_shape[dim] = output_shape[dim]//2 + output_shape[dim]%2
@@ -240,7 +240,7 @@ def _shortcut(input, residual, subsample, upsample, upsample_mode='repeat',
         shortcut = _upsample(shortcut,
                              mode=upsample_mode,
                              ndim=ndim,
-                             filters=shortcut._keras_shape[channel_axis],
+                             filters=shortcut.shape[channel_axis],
                              kernel_size=2,
                              kernel_initializer=init,
                              kernel_regularizer=_l2(weight_decay),
@@ -249,10 +249,10 @@ def _shortcut(input, residual, subsample, upsample, upsample_mode='repeat',
     # Expand channels of shortcut to match residual.
     # Stride appropriately to match residual (width, height)
     # Should be int if network architecture is correctly configured.
-    equal_channels = residual._keras_shape[channel_axis] == \
-                                            shortcut._keras_shape[channel_axis]
+    equal_channels = residual.shape[channel_axis] == \
+                                            shortcut.shape[channel_axis]
     if not equal_channels:
-        shortcut = Convolution(filters=residual._keras_shape[channel_axis],
+        shortcut = Convolution(filters=residual.shape[channel_axis],
                                kernel_size=1, ndim=ndim,
                                kernel_initializer=init, padding='valid',
                                kernel_regularizer=_l2(weight_decay),
@@ -641,7 +641,7 @@ def dense_block(filters, block_depth=4, subsample=False, upsample=False,
         
         # Transition down (preserve num filters)
         if subsample:
-            output = norm_nlin_conv(filters=output._keras_shape[channel_axis],
+            output = norm_nlin_conv(filters=output.shape[channel_axis],
                                     kernel_size=1,
                                     normalization=normalization,
                                     weight_decay=weight_decay,
@@ -659,7 +659,7 @@ def dense_block(filters, block_depth=4, subsample=False, upsample=False,
         
         # If 'sum' mode, make the channel dimension match.
         if skip_merge_mode=='sum':
-            if tensors[0]._keras_shape[channel_axis] != filters:
+            if tensors[0].shape[channel_axis] != filters:
                 tensors[0] = Convolution(filters=filters,
                                          kernel_size=1,
                                          ndim=ndim,
@@ -704,7 +704,7 @@ def dense_block(filters, block_depth=4, subsample=False, upsample=False,
             output = _upsample(output,
                                mode=upsample_mode,
                                ndim=ndim,
-                               filters=output._keras_shape[channel_axis],
+                               filters=output.shape[channel_axis],
                                kernel_size=3,
                                kernel_initializer=init,
                                kernel_regularizer=_l2(weight_decay),

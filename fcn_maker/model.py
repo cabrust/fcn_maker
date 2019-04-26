@@ -1,17 +1,18 @@
 from __future__ import (print_function,
                         division)
-from keras.models import Model
-from keras.layers import (Input,
+
+from tensorflow.python.keras.models import Model
+from tensorflow.python.keras.layers import (Input,
                           Activation,
                           Dense,
                           Permute,
                           Lambda,
                           add,
                           concatenate)
-from keras.layers.normalization import BatchNormalization
-from keras import backend as K
-from keras.regularizers import l2
-from keras.initializers import VarianceScaling
+from tensorflow.python.keras.layers.normalization import BatchNormalization
+from tensorflow.python.keras import backend as K
+from tensorflow.python.keras.regularizers import l2
+from tensorflow.python.keras.initializers import VarianceScaling
 import numpy as np
 from .blocks import (Convolution,
                      get_nonlinearity,
@@ -125,8 +126,8 @@ def assemble_model(input_shape, num_classes, blocks,
     '''
     def make_long_skip(prev_x, concat_x, name=None):
         if long_skip_merge_mode == 'sum':
-            num_target_filters = concat_x._keras_shape[channel_axis]
-            if prev_x._keras_shape[channel_axis] != num_target_filters:
+            num_target_filters = concat_x.shape[channel_axis]
+            if prev_x.shape[channel_axis] != num_target_filters:
                 prev_x = Convolution(filters=num_target_filters,
                                      kernel_size=1,
                                      ndim=ndim,
@@ -153,8 +154,8 @@ def assemble_model(input_shape, num_classes, blocks,
             return x
         
         # Crop upward path to match long skip resolution, if needed.
-        cropped_shape = list(concat_x._keras_shape)
-        cropped_shape[channel_axis] = prev_x._keras_shape[channel_axis]
+        cropped_shape = list(concat_x.shape)
+        cropped_shape[channel_axis] = prev_x.shape[channel_axis]
         cropped_shape = cropped_shape[1:]
         crop = Lambda(_crop_to_fit, output_shape=cropped_shape)
         prev_x = crop([prev_x, concat_x])
@@ -182,35 +183,35 @@ def assemble_model(input_shape, num_classes, blocks,
     if preprocessor is not None:
         x = preprocessor(x)
         preprocessor_tensor = x
-        v_print("PRE - shape: {}".format(x._keras_shape))
+        v_print("PRE - shape: {}".format(x.shape))
     
     # Encoder (downsampling)
     for b in range(0, depth):
         func, kwargs = blocks[b]
         x = func(subsample=True, **kwargs)(x)
         tensors[b] = x
-        v_print("BLOCK {} - shape: {}".format(b, x._keras_shape))
+        v_print("BLOCK {} - shape: {}".format(b, x.shape))
         
     # Bottleneck
     func, kwargs = blocks[depth]
     x = func(subsample=True, upsample=True, **kwargs)(x)
-    v_print("ACROSS {} - shape: {}".format(depth, x._keras_shape))
+    v_print("ACROSS {} - shape: {}".format(depth, x.shape))
     
     # Decoder (upsampling)
     for b in range(0, depth):
         if long_skip:
             concat_x = tensors[depth-b-1]
-            n_filters = concat_x._keras_shape[channel_axis]
+            n_filters = concat_x.shape[channel_axis]
             x = make_long_skip(prev_x=x,
                                concat_x=concat_x,
                                name=_unique('long_skip_{}'.format(depth-b-1)))
         func, kwargs = blocks[depth+b+1]
         x = func(upsample=True, **kwargs)(x)
-        v_print("UP {} - shape: {}".format(depth-b-1, x._keras_shape))
+        v_print("UP {} - shape: {}".format(depth-b-1, x.shape))
         
     # Skip from preprocessor output to postprocessor input.
     if long_skip and preprocessor_tensor is not None:
-        n_filters = preprocessor_tensor._keras_shape[channel_axis]
+        n_filters = preprocessor_tensor.shape[channel_axis]
         x = make_long_skip(prev_x=x,
                            concat_x=preprocessor_tensor,
                            name=_unique('long_skip_top'))
@@ -218,7 +219,7 @@ def assemble_model(input_shape, num_classes, blocks,
     # Postprocessor
     if postprocessor is not None:
         x = postprocessor(x)
-        v_print("POST - shape: {}".format(x._keras_shape))
+        v_print("POST - shape: {}".format(x.shape))
     
     # OUTPUT (SOFTMAX)
     if num_classes is not None:
